@@ -1,155 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width" />
-  <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300,300italic,400italic,600,600italic,700italic,700' rel='stylesheet' type='text/css'>
-  
-  <title>Scratch Card</title>
-  <style type="text/css">
-  html {
-  box-sizing: border-box;
-}
-*, *:before, *:after {
-  box-sizing: inherit;
-}
-body {
-    background:#efefef;
-}
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width" />
+    <title>2021 Calendar</title>
 
-.background {
-    position:absolute;
-    z-index:1;
-}
+    <style type="text/css">
+      body {
+          background: #efefef;
+      }
+      .minidup-background {
+          position: absolute;
+          z-index: 1;
+      }
+      .minidup-scratchpad {
+        box-sizing: border-box;
+        width: 620px;
+        height: 920px;
+        border: solid 10px #FFFFFF;
+        margin: 12px auto;
+        cursor: url('assets/img/coin.png') 32 32, default;
+      }
+      .minidup-container {
+        position: relative;
+        width: 600px;
+        height: 900px;
+        margin: 0 auto;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        width: 100%;
+      }
+      .minidup-canvas {
+          position: relative;
+          z-index: 20;
+      }
+    </style>
+  </head>
 
-.container {
-  position: relative;
-  width: 600px;
-  height: 800px;
-  margin: 0 auto;
-    -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  -khtml-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  width:100%;
-}
+  <body>
+    <div class="minidup-container" id="minidup-container">
+      <div class="minidup-scratchpad">
+          <img id="minidup-background" class="minidup-background" alt="Pregnancy image" src="assets/img/background.jpg" style="display: none;" />
+          <canvas class="minidup-canvas" id="minidup-canvas" width="600" height="900"></canvas>
+      </div> 
+    </div>
 
-.canvas {
-    position:relative;
-    z-index:20;
-}
+    <script type="text/javascript">
+      (function() {
+        
+        'use strict';
+        
+        var isDrawing, lastPoint;
+        var container    = document.getElementById('minidup-container'),
+            canvas       = document.getElementById('minidup-canvas'),
+            canvasWidth  = canvas.width,
+            canvasHeight = canvas.height,
+            ctx          = canvas.getContext('2d'),
+            image        = new Image(),
+            brush        = new Image();
 
-.scratchpad {
-  width: 620px;
-  height: 820px;
-  border: solid 10px #FFFFFF;
-  margin: 32px auto;
-  cursor: url('assets/img/coin.png') 32 32, default;
-}
-  </style>
+        image.src = 'assets/img/overlay.jpg';
+        image.width = 600;
+        image.height = 900;
+        image.onload = function() {
+          ctx.drawImage(image, 0, 0);
+          document.querySelectorAll('.minidup-scratchpad')[0].style.visibility = 'visible';
+          document.getElementById('minidup-background').style.display = 'unset';
+        };
+        brush.src = 'assets/img/coin.png';
 
-</head>
-<body>
+        canvas.addEventListener('mousedown', handleMouseDown, false);
+        canvas.addEventListener('touchstart', handleMouseDown, false);
+        canvas.addEventListener('mousemove', handleMouseMove, false);
+        canvas.addEventListener('touchmove', handleMouseMove, false);
+        canvas.addEventListener('mouseup', handleMouseUp, false);
+        canvas.addEventListener('touchend', handleMouseUp, false);
+        
+        function distanceBetween(point1, point2) {
+          return Math.sqrt(Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2));
+        }
+        
+        function angleBetween(point1, point2) {
+          return Math.atan2( point2.x - point1.x, point2.y - point1.y );
+        }
+        
+        function getMouse(e, canvas) {
+          var offsetX = 0, offsetY = 0, mx, my;
 
-<div class="container" id="js-container">
-    <div class="scratchpad">
-        <img id="background" class="background" alt="Pregnancy image" src="assets/img/background.jpg" style="display: none;" />
-        <canvas class="canvas" id="js-canvas" width="600" height="900"></canvas>
-    </div> 
-  </div>
+          if (canvas.offsetParent !== undefined) {
+            do {
+              offsetX += canvas.offsetLeft;
+              offsetY += canvas.offsetTop;
+            } while ((canvas = canvas.offsetParent));
+          }
 
-<script type="text/javascript">
+          mx = (e.pageX || e.touches[0].clientX) - offsetX;
+          my = (e.pageY || e.touches[0].clientY) - offsetY;
 
-(function() {
-  
-  'use strict';
-  
-  var isDrawing, lastPoint;
-  var container    = document.getElementById('js-container'),
-      canvas       = document.getElementById('js-canvas'),
-      canvasWidth  = canvas.width,
-      canvasHeight = canvas.height,
-      ctx          = canvas.getContext('2d'),
-      image        = new Image(),
-      brush        = new Image();
-      
-  // base64 Workaround because Same-Origin-Policy
-  image.src = 'assets/img/overlay.jpg';
-  image.width = 600;
-  image.height = 800;
-  image.onload = function() {
-    ctx.drawImage(image, 0, 0);
-    document.querySelectorAll('.scratchpad')[0].style.visibility = 'visible';
-  document.getElementById('background').style.display = 'unset';
-  };
-  brush.src = 'assets/img/coin.png';
+          return {x: mx, y: my};
+        }
+        
+        function handleMouseDown(e) {
+          isDrawing = true;
+          lastPoint = getMouse(e, canvas);
+        }
 
-  canvas.addEventListener('mousedown', handleMouseDown, false);
-  canvas.addEventListener('touchstart', handleMouseDown, false);
-  canvas.addEventListener('mousemove', handleMouseMove, false);
-  canvas.addEventListener('touchmove', handleMouseMove, false);
-  canvas.addEventListener('mouseup', handleMouseUp, false);
-  canvas.addEventListener('touchend', handleMouseUp, false);
-  
-  function distanceBetween(point1, point2) {
-    return Math.sqrt(Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2));
-  }
-  
-  function angleBetween(point1, point2) {
-    return Math.atan2( point2.x - point1.x, point2.y - point1.y );
-  }
-  
-  function getMouse(e, canvas) {
-    var offsetX = 0, offsetY = 0, mx, my;
+        function handleMouseMove(e) {
+          if (!isDrawing) { return; }
+          
+          e.preventDefault();
 
-    if (canvas.offsetParent !== undefined) {
-      do {
-        offsetX += canvas.offsetLeft;
-        offsetY += canvas.offsetTop;
-      } while ((canvas = canvas.offsetParent));
-    }
+          var currentPoint = getMouse(e, canvas),
+              dist = distanceBetween(lastPoint, currentPoint),
+              angle = angleBetween(lastPoint, currentPoint),
+              x, y;
+          
+          for (var i = 0; i < dist; i++) {
+            x = lastPoint.x + (Math.sin(angle) * i) - 25;
+            y = lastPoint.y + (Math.cos(angle) * i) - 25;
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.drawImage(brush, x, y);
+          }
+          
+          lastPoint = currentPoint;
+        }
 
-    mx = (e.pageX || e.touches[0].clientX) - offsetX;
-    my = (e.pageY || e.touches[0].clientY) - offsetY;
-
-    return {x: mx, y: my};
-  }
-  
-  function handleMouseDown(e) {
-    isDrawing = true;
-    lastPoint = getMouse(e, canvas);
-  }
-
-  function handleMouseMove(e) {
-    if (!isDrawing) { return; }
-    
-    e.preventDefault();
-
-    var currentPoint = getMouse(e, canvas),
-        dist = distanceBetween(lastPoint, currentPoint),
-        angle = angleBetween(lastPoint, currentPoint),
-        x, y;
-    
-    for (var i = 0; i < dist; i++) {
-      x = lastPoint.x + (Math.sin(angle) * i) - 25;
-      y = lastPoint.y + (Math.cos(angle) * i) - 25;
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.drawImage(brush, x, y);
-    }
-    
-    lastPoint = currentPoint;
-  }
-
-  function handleMouseUp(e) {
-    isDrawing = false;
-  }
-  
-})();
-
-</script>
-      
-
-</body>
+        function handleMouseUp(e) {
+          isDrawing = false;
+        }
+      })();
+    </script>
+  </body>
 </html>
